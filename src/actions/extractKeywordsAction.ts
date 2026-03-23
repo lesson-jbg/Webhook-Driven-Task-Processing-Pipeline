@@ -1,4 +1,4 @@
-import { askOpenRouter } from "./openRouterClient";
+import { askOpenRouter } from './openRouterClient';
 
 type Payload = {
   message?: string;
@@ -6,23 +6,23 @@ type Payload = {
 };
 
 export async function extractKeywordsAction(payload: Payload) {
-  const message = typeof payload.message === "string" ? payload.message : "";
+  const message = typeof payload.message === 'string' ? payload.message : '';
 
   if (!message.trim()) {
     return {
       ...payload,
       keywords: [],
-      keywordsSource: "fallback",
+      keywordsSource: 'fallback',
     };
   }
 
   const result = await askOpenRouter(
-    "Extract 5 important keywords from the text. Return only a comma-separated list with no explanation.",
-    message
+    'Extract 5 important keywords from the text. Return only a comma-separated list with no explanation.',
+    message,
   );
 
   const keywords = result
-    .split(",")
+    .split(',')
     .map((word: string) => word.trim())
     .filter(Boolean)
     .slice(0, 5);
@@ -30,6 +30,6 @@ export async function extractKeywordsAction(payload: Payload) {
   return {
     ...payload,
     keywords,
-    keywordsSource: "arcee-ai/trinity-large-preview:free",
+    keywordsSource: 'arcee-ai/trinity-large-preview:free',
   };
 }

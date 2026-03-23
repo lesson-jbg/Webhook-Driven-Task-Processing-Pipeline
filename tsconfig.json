@@ -15,5 +15,5 @@
     "sourceMap": true,
     "skipLibCheck": true
   },
-    "exclude": ["drizzle.config.ts", "node_modules"]
+  "exclude": ["drizzle.config.ts", "node_modules"]
 }

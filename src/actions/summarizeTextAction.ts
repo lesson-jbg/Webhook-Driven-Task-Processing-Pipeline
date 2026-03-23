@@ -1,4 +1,4 @@
-import { askOpenRouter } from "./openRouterClient";
+import { askOpenRouter } from './openRouterClient';
 
 type Payload = {
   message?: string;
@@ -6,24 +6,24 @@ type Payload = {
 };
 
 export async function summarizeTextAction(payload: Payload) {
-  const message = typeof payload.message === "string" ? payload.message : "";
+  const message = typeof payload.message === 'string' ? payload.message : '';
 
   if (!message.trim()) {
     return {
       ...payload,
-      summary: "",
-      summarySource: "fallback",
+      summary: '',
+      summarySource: 'fallback',
     };
   }
 
   const summary = await askOpenRouter(
     "Summarize the user's text in one short sentence. Return only the summary.",
-    message
+    message,
   );
 
   return {
     ...payload,
     summary,
-    summarySource: "arcee-ai/trinity-large-preview:free",
+    summarySource: 'arcee-ai/trinity-large-preview:free',
   };
 }

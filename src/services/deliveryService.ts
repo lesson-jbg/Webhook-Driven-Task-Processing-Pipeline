@@ -1,6 +1,6 @@
-import axios from "axios";
-import { db } from "../db/client";
-import { deliveries } from "../db/schema";
+import axios from 'axios';
+import { db } from '../db/client';
+import { deliveries } from '../db/schema';
 
 export async function createDelivery(data: {
   jobId: string;
@@ -15,17 +15,14 @@ export async function createDelivery(data: {
   return result[0];
 }
 
-export async function sendToSubscriber(
-  callbackUrl: string,
-  payload: unknown
-) {
+export async function sendToSubscriber(callbackUrl: string, payload: unknown) {
   return axios.post(callbackUrl, payload);
 }
 
 export async function sendWithRetry(
   callbackUrl: string,
   payload: unknown,
-  maxAttempts = 3
+  maxAttempts = 3,
 ) {
   let attemptCount = 0;
   let lastError: string | null = null;
@@ -42,8 +39,7 @@ export async function sendWithRetry(
         lastError: null,
       };
     } catch (error) {
-      lastError =
-        error instanceof Error ? error.message : "Delivery failed";
+      lastError = error instanceof Error ? error.message : 'Delivery failed';
 
       if (attemptCount < maxAttempts) {
         await new Promise((resolve) => setTimeout(resolve, 1000));

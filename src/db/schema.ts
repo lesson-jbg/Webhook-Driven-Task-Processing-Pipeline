@@ -1,50 +1,57 @@
-import { pgTable, uuid,text,timestamp,jsonb,integer} from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  jsonb,
+  integer,
+} from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 
-export const pipelines = pgTable("pipelines", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  webhookPath: text("webhook_path").notNull().unique(),
-  actionType: text("action_type").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+export const pipelines = pgTable('pipelines', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  webhookPath: text('webhook_path').notNull().unique(),
+  actionType: text('action_type').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
-export const subscribers = pgTable("subscribers", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  pipelineId: uuid("pipeline_id")
+export const subscribers = pgTable('subscribers', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  pipelineId: uuid('pipeline_id')
     .notNull()
-    .references(() => pipelines.id, { onDelete: "cascade" }),
-  callbackUrl: text("callback_url").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+    .references(() => pipelines.id, { onDelete: 'cascade' }),
+  callbackUrl: text('callback_url').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
-export const jobs = pgTable("jobs", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  pipelineId: uuid("pipeline_id")
+export const jobs = pgTable('jobs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  pipelineId: uuid('pipeline_id')
     .notNull()
-    .references(() => pipelines.id, { onDelete: "cascade" }),
-  payload: jsonb("payload").notNull(),
-  status: text("status").notNull().default("pending"),
-  processedPayload: jsonb("processed_payload"),
-  errorMessage: text("error_message"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    .references(() => pipelines.id, { onDelete: 'cascade' }),
+  payload: jsonb('payload').notNull(),
+  status: text('status').notNull().default('pending'),
+  processedPayload: jsonb('processed_payload'),
+  errorMessage: text('error_message'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-export const deliveries = pgTable("deliveries", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  jobId: uuid("job_id")
+export const deliveries = pgTable('deliveries', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  jobId: uuid('job_id')
     .notNull()
-    .references(() => jobs.id, { onDelete: "cascade" }),
-  subscriberId: uuid("subscriber_id")
+    .references(() => jobs.id, { onDelete: 'cascade' }),
+  subscriberId: uuid('subscriber_id')
     .notNull()
-    .references(() => subscribers.id, { onDelete: "cascade" }),
-  status: text("status").notNull().default("pending"),
-  attemptCount: integer("attempt_count").notNull().default(0),
-  lastError: text("last_error"),
-  lastAttemptAt: timestamp("last_attempt_at"),
-  deliveredAt: timestamp("delivered_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+    .references(() => subscribers.id, { onDelete: 'cascade' }),
+  status: text('status').notNull().default('pending'),
+  attemptCount: integer('attempt_count').notNull().default(0),
+  lastError: text('last_error'),
+  lastAttemptAt: timestamp('last_attempt_at'),
+  deliveredAt: timestamp('delivered_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const pipelinesRelations = relations(pipelines, ({ many }) => ({

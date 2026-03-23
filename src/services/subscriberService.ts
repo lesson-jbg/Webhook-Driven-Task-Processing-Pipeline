@@ -1,6 +1,6 @@
-import { db } from "../db/client";
-import { subscribers } from "../db/schema";
-import { eq } from "drizzle-orm";
+import { db } from '../db/client';
+import { subscribers } from '../db/schema';
+import { eq } from 'drizzle-orm';
 
 export async function createSubscriber(data: {
   pipelineId: string;
@@ -11,7 +11,10 @@ export async function createSubscriber(data: {
 }
 
 export async function getSubscribersByPipelineId(pipelineId: string) {
-  return db.select().from(subscribers).where(eq(subscribers.pipelineId, pipelineId));
+  return db
+    .select()
+    .from(subscribers)
+    .where(eq(subscribers.pipelineId, pipelineId));
 }
 
 export async function deleteSubscriber(id: string) {

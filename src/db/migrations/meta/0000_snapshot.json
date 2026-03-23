@@ -48,9 +48,7 @@
         "pipelines_webhook_path_unique": {
           "name": "pipelines_webhook_path_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "webhook_path"
-          ]
+          "columns": ["webhook_path"]
         }
       },
       "policies": {},
