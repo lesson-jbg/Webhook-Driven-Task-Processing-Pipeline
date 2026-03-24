@@ -163,6 +163,7 @@ cd project
 Create a `.env` file:
 
 add your keys same as env.example
+you can find open-router api key at in the form at additional info field
 
 ### 3. Run with Docker
 
