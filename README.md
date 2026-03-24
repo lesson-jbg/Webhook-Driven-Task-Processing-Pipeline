@@ -163,6 +163,7 @@ cd project
 Create a `.env` file:
 
 add your keys same as env.example
+you can find open-router api key at in the form at additional info field
 
 ### 3. Run with Docker
 
@@ -191,6 +192,12 @@ docker compose up --build
 - `GET /api/jobs`
 - `GET /api/jobs/:id`
 - `GET /api/jobs/:id/deliveries`
+
+### Subscribers
+
+- `POST /pipelines/:id/subscribers`
+- `GET /pipelines/:id/subscribers`
+- `DELETE /subscribers/:id`
 
 ---
 
