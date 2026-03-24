@@ -192,7 +192,11 @@ docker compose up --build
 - `GET /api/jobs`
 - `GET /api/jobs/:id`
 - `GET /api/jobs/:id/deliveries`
-
+  
+### Subscribers
+- `POST /pipelines/:id/subscribers`
+- `GET /pipelines/:id/subscribers`
+- `DELETE /subscribers/:id`
 ---
 
 ## 🔁 Delivery & Retry Logic
