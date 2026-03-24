@@ -19,7 +19,7 @@ It allows users to:
 
 ## 🏗️ Architecture
 
-![System Architecture](./architecture.png)
+![System Architecture](./src/utils/system%20architecture%20diagram%20.png)
 
 ### Flow
 
@@ -34,7 +34,7 @@ It allows users to:
 
 ## 🗄️ Database Schema
 
-![Database Schema](./schema.png)
+![Database Schema](./src/utils/schema%20design.png)
 
 ### Tables
 
