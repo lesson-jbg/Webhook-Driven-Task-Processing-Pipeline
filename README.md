@@ -10,10 +10,10 @@ This project is a backend service inspired by automation tools like Zapier and n
 
 It allows users to:
 
-* Create pipelines that receive webhook events
-* Process incoming data using AI-powered actions
-* Deliver results to subscribers with retry logic
-* Track job status and delivery attempts
+- Create pipelines that receive webhook events
+- Process incoming data using AI-powered actions
+- Deliver results to subscribers with retry logic
+- Track job status and delivery attempts
 
 ---
 
@@ -38,24 +38,24 @@ It allows users to:
 
 ### Tables
 
-* **pipelines** → defines processing logic
-* **jobs** → stores incoming webhook data
-* **subscribers** → destinations for processed results
-* **deliveries** → tracks delivery attempts and retries
+- **pipelines** → defines processing logic
+- **jobs** → stores incoming webhook data
+- **subscribers** → destinations for processed results
+- **deliveries** → tracks delivery attempts and retries
 
 ---
 
 ## ⚙️ Features
 
-* ✅ Full CRUD API for pipelines
-* ✅ Webhook ingestion and job queue
-* ✅ Background worker processing
-* ✅ AI-powered actions using OpenRouter
-* ✅ Retry logic for failed deliveries
-* ✅ Job status and history API
-* ✅ Dockerized setup
-* ✅ CI pipeline with GitHub Actions
-* ✅ Code quality with ESLint and Prettier
+- ✅ Full CRUD API for pipelines
+- ✅ Webhook ingestion and job queue
+- ✅ Background worker processing
+- ✅ AI-powered actions using OpenRouter
+- ✅ Retry logic for failed deliveries
+- ✅ Job status and history API
+- ✅ Dockerized setup
+- ✅ CI pipeline with GitHub Actions
+- ✅ Code quality with ESLint and Prettier
 
 ---
 
@@ -65,9 +65,9 @@ It allows users to:
 
 Classifies text into:
 
-* positive
-* negative
-* neutral
+- positive
+- negative
+- neutral
 
 ### 2. Text Summarization
 
@@ -119,8 +119,6 @@ Create a `.env` file:
 
 add your keys same as env.example
 
-
-
 ### 3. Run with Docker
 
 ```bash
@@ -133,39 +131,39 @@ docker compose up --build
 
 ### Pipelines
 
-* `POST /api/pipelines`
-* `GET /api/pipelines`
-* `GET /api/pipelines/:id`
-* `PUT /api/pipelines/:id`
-* `DELETE /api/pipelines/:id`
+- `POST /api/pipelines`
+- `GET /api/pipelines`
+- `GET /api/pipelines/:id`
+- `PUT /api/pipelines/:id`
+- `DELETE /api/pipelines/:id`
 
 ### Webhooks
 
-* `POST /api/webhooks/:webhookPath`
+- `POST /api/webhooks/:webhookPath`
 
 ### Jobs
 
-* `GET /api/jobs`
-* `GET /api/jobs/:id`
-* `GET /api/jobs/:id/deliveries`
+- `GET /api/jobs`
+- `GET /api/jobs/:id`
+- `GET /api/jobs/:id/deliveries`
 
 ---
 
 ## 🔁 Delivery & Retry Logic
 
-* Each job result is sent to all subscribers
-* Failed deliveries are retried automatically
-* Delivery attempts are logged in the database
+- Each job result is sent to all subscribers
+- Failed deliveries are retried automatically
+- Delivery attempts are logged in the database
 
 ---
 
 ## 🧠 Design Decisions
 
-* **Queue-based processing** → improves scalability
-* **Worker service** → decouples processing from API
-* **Action layer** → allows flexible data transformations
-* **AI integration (OpenRouter)** → enables intelligent processing
-* **Retry mechanism** → ensures reliability
+- **Queue-based processing** → improves scalability
+- **Worker service** → decouples processing from API
+- **Action layer** → allows flexible data transformations
+- **AI integration (OpenRouter)** → enables intelligent processing
+- **Retry mechanism** → ensures reliability
 
 ---
 
@@ -173,9 +171,9 @@ docker compose up --build
 
 GitHub Actions pipeline:
 
-* installs dependencies
-* builds the project
-* runs lint and formatting checks
+- installs dependencies
+- builds the project
+- runs lint and formatting checks
 
 ---
 
