@@ -79,28 +79,73 @@ Extracts important keywords for analytics and routing.
 
 ---
 
-## 🧪 Example Flow
+## 🎯 Example Scenario: Customer Complaint Processing System (Postman Flow)
 
-Webhook → Job → Worker → AI Action → Delivery → Retry → Tracking
+Use Postman and execute the following requests **in order**:
 
-### Example Input
+**POST** http://localhost:3000/api/pipelines  
+Body (raw → JSON):
 
-```json
+```
 {
-  "message": "The customer is frustrated due to delayed delivery."
+  "name": "Customer Complaint Sentiment",
+  "webhookPath": "customer-sentiment",
+  "actionType": "ai_sentiment"
 }
 ```
 
-### Example Output
+**POST** http://localhost:3000/api/pipelines  
+Body (raw → JSON):
 
-```json
+```
 {
-  "message": "...",
-  "sentiment": "negative",
-  "summary": "...",
-  "keywords": ["customer", "delivery", "delayed"]
+  "name": "Customer Complaint Summary",
+  "webhookPath": "customer-summary",
+  "actionType": "summarize_text"
 }
 ```
+
+**POST** http://localhost:3000/api/pipelines  
+Body (raw → JSON):
+
+```
+{
+  "name": "Customer Complaint Keywords",
+  "webhookPath": "customer-keywords",
+  "actionType": "extract_keywords"
+}
+```
+
+**POST** http://localhost:3000/api/webhooks/customer-sentiment  
+Body (raw → JSON):
+
+```
+{
+  "message": "I am extremely frustrated. My order was delayed for two weeks and customer support did not respond. This is terrible service."
+}
+```
+
+**POST** http://localhost:3000/api/webhooks/customer-summary  
+Body (raw → JSON):
+
+```
+{
+  "message": "I am extremely frustrated. My order was delayed for two weeks and customer support did not respond. This is terrible service."
+}
+```
+
+**POST** http://localhost:3000/api/webhooks/customer-keywords  
+Body (raw → JSON):
+
+```
+{
+  "message": "I am extremely frustrated. My order was delayed for two weeks and customer support did not respond. This is terrible service."
+}
+```
+
+(Wait 2–3 seconds for processing)
+
+**GET** http://localhost:3000/api/jobs
 
 ---
 
