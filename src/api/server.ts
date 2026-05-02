@@ -17,7 +17,7 @@ app.use('/api', jobRoutes);
 /*app.get('/', (req, res) => {
   res.send('Webhook Pipeline Service Running');
 });*/
-app.use(express.static(path.join(__dirname, "../../public")));
+app.use(express.static(path.join(__dirname, '../../public')));
 //database connection test
 pool
   .query('SELECT NOW()')
