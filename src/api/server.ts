@@ -5,6 +5,7 @@ import subscriberRoutes from './routes/subscriberRoutes';
 import webhookRoutes from './routes/webhookRoutes';
 import { startWorker } from '../workers/jobWorker';
 import jobRoutes from './routes/jobRoutes';
+import path from 'path';
 const app = express();
 
 const PORT = 3000;
@@ -13,10 +14,10 @@ app.use('/api', pipelineRoutes);
 app.use('/api', subscriberRoutes);
 app.use('/api', webhookRoutes);
 app.use('/api', jobRoutes);
-app.get('/', (req, res) => {
+/*app.get('/', (req, res) => {
   res.send('Webhook Pipeline Service Running');
-});
-
+});*/
+app.use(express.static(path.join(__dirname, "../../public")));
 //database connection test
 pool
   .query('SELECT NOW()')
