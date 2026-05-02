@@ -1,0 +1,779 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Webhook-Driven Task Processing Pipeline - Full Infrastructure
+  Covers: Networking (Jihad), Compute (Mohammad), Security/CI-CD/Observability (Nassar)
+  Region: eu-north-1 | Account: 045230653823
+
+# ─────────────────────────────────────────────
+# PARAMETERS
+# ─────────────────────────────────────────────
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: [production, staging]
+
+  ECRImageURI:
+    Type: String
+    Default: "045230653823.dkr.ecr.eu-north-1.amazonaws.com/webhook-api:latest"
+    Description: Docker image URI from ECR
+
+  # NOTE: AMI ID below is Amazon Linux 2023 for eu-north-1 as of May 2026.
+  # For production, use SSM Parameter: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+  # For this academic project, the AMI ID is hardcoded for simplicity.
+
+# ─────────────────────────────────────────────
+# RESOURCES
+# ─────────────────────────────────────────────
+Resources:
+
+  # ══════════════════════════════════════════
+  # JIHAD - Phase 1: Networking & VPC (NET-01 to NET-05, SEC-04)
+  # ══════════════════════════════════════════
+
+  # NET-01: VPC
+  WebhookVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: webhook-pipeline-vpc
+        - Key: Environment
+          Value: !Ref Environment
+
+  # NET-02: Subnets
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref WebhookVPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: eu-north-1a
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: public-subnet-a
+
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref WebhookVPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: eu-north-1b
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: public-subnet-b
+
+  PrivateAppSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref WebhookVPC
+      CidrBlock: 10.0.3.0/24
+      AvailabilityZone: eu-north-1a
+      Tags:
+        - Key: Name
+          Value: private-app-subnet-a
+
+  PrivateAppSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref WebhookVPC
+      CidrBlock: 10.0.4.0/24
+      AvailabilityZone: eu-north-1b
+      Tags:
+        - Key: Name
+          Value: private-app-subnet-b
+
+  PrivateDataSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref WebhookVPC
+      CidrBlock: 10.0.5.0/24
+      AvailabilityZone: eu-north-1a
+      Tags:
+        - Key: Name
+          Value: private-data-subnet-a
+
+  PrivateDataSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref WebhookVPC
+      CidrBlock: 10.0.6.0/24
+      AvailabilityZone: eu-north-1b
+      Tags:
+        - Key: Name
+          Value: private-data-subnet-b
+
+  # NET-03: Internet Gateway
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: webhook-igw
+
+  AttachInternetGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref WebhookVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref WebhookVPC
+      Tags:
+        - Key: Name
+          Value: public-rt
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachInternetGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetARouteAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetBRouteAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetB
+      RouteTableId: !Ref PublicRouteTable
+
+  # NET-04: NAT Gateways
+  EIPNatA:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  # NOTE: Using single NAT Gateway for cost saving (academic project).
+  # For production, add NatGatewayB in PublicSubnetB for full HA.
+  NatGatewayA:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt EIPNatA.AllocationId
+      SubnetId: !Ref PublicSubnetA
+      Tags:
+        - Key: Name
+          Value: nat-gateway-a
+
+  PrivateRouteTableA:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref WebhookVPC
+      Tags:
+        - Key: Name
+          Value: private-rt-a
+
+  PrivateRouteA:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableA
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayA
+
+  PrivateRouteTableB:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref WebhookVPC
+      Tags:
+        - Key: Name
+          Value: private-rt-b
+
+  PrivateRouteB:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableB
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGatewayA  # Using single NAT for cost saving
+
+  PrivateAppSubnetARouteAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateAppSubnetA
+      RouteTableId: !Ref PrivateRouteTableA
+
+  PrivateDataSubnetARouteAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateDataSubnetA
+      RouteTableId: !Ref PrivateRouteTableA
+
+  PrivateAppSubnetBRouteAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateAppSubnetB
+      RouteTableId: !Ref PrivateRouteTableB
+
+  PrivateDataSubnetBRouteAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateDataSubnetB
+      RouteTableId: !Ref PrivateRouteTableB
+
+  # NET-05: Security Groups
+  SGAlb:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ALB Security Group
+      GroupName: alb-sg
+      VpcId: !Ref WebhookVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: alb-sg
+
+  SGApi:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: API Security Group
+      GroupName: api-sg
+      VpcId: !Ref WebhookVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          SourceSecurityGroupId: !Ref SGAlb
+      Tags:
+        - Key: Name
+          Value: api-sg
+
+  SGWorker:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Worker Security Group - no inbound HTTP
+      GroupName: worker-sg
+      VpcId: !Ref WebhookVPC
+      Tags:
+        - Key: Name
+          Value: worker-sg
+
+  SGRds:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: RDS Security Group
+      GroupName: rds-sg
+      VpcId: !Ref WebhookVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref SGApi
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref SGWorker
+      Tags:
+        - Key: Name
+          Value: rds-sg
+
+  # SEC-04: Network ACLs
+  PrivateAppNACL:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref WebhookVPC
+      Tags:
+        - Key: Name
+          Value: private-app-nacl
+
+  PrivateDataNACL:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref WebhookVPC
+      Tags:
+        - Key: Name
+          Value: private-data-nacl
+
+  # ══════════════════════════════════════════
+  # MOHAMMAD - Phase 2: Compute (CMP-01 to CMP-04)
+  # ══════════════════════════════════════════
+
+  # CMP-03: Application Load Balancer
+  ALBWebhook:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: ALB-webhook
+      Type: application
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref SGAlb
+      Subnets:
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
+      LoadBalancerAttributes:
+        - Key: access_logs.s3.enabled
+          Value: "true"
+        - Key: access_logs.s3.bucket
+          Value: webhook-pipeline-logs
+        - Key: access_logs.s3.prefix
+          Value: alb-logs
+      Tags:
+        - Key: Name
+          Value: ALB-webhook
+
+  APITargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: TG-API
+      Protocol: HTTP
+      Port: 3000
+      VpcId: !Ref WebhookVPC
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 5
+      HealthCheckTimeoutSeconds: 10
+      HealthCheckIntervalSeconds: 30
+      Matcher:
+        HttpCode: 200-399
+
+  ALBListenerHTTP:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ALBWebhook
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref APITargetGroup
+
+  # CMP-01 & CMP-02: IAM Role for EC2 + Auto Scaling Groups
+  EC2WebAppRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: EC2-WebApp-Role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Tags:
+        - Key: Name
+          Value: EC2-WebApp-Role
+
+  EC2WebAppInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: EC2-WebApp-Profile
+      Roles:
+        - !Ref EC2WebAppRole
+
+  APILaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: LT-API
+      LaunchTemplateData:
+        ImageId: ami-0a23a4b42ec0af849  # Amazon Linux 2023 eu-north-1
+        InstanceType: t3.small
+        IamInstanceProfile:
+          Name: !Ref EC2WebAppInstanceProfile
+        SecurityGroupIds:
+          - !Ref SGApi
+        MetadataOptions:
+          HttpTokens: required
+          HttpPutResponseHopLimit: 1
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            exec > /var/log/user-data.log 2>&1
+            sleep 10
+            yum install docker -y
+            service docker start
+            aws ecr get-login-password --region eu-north-1 | \
+            docker login --username AWS --password-stdin 045230653823.dkr.ecr.eu-north-1.amazonaws.com
+            docker pull ${ECRImageURI}
+            docker run -d -p 3000:3000 ${ECRImageURI}
+
+  WorkerLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: LT-Worker
+      LaunchTemplateData:
+        ImageId: ami-0a23a4b42ec0af849
+        InstanceType: t3.small
+        IamInstanceProfile:
+          Name: !Ref EC2WebAppInstanceProfile
+        SecurityGroupIds:
+          - !Ref SGWorker
+        MetadataOptions:
+          HttpTokens: required
+          HttpPutResponseHopLimit: 1
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            exec > /var/log/user-data.log 2>&1
+            sleep 10
+            yum install docker -y
+            service docker start
+            aws ecr get-login-password --region eu-north-1 | \
+            docker login --username AWS --password-stdin 045230653823.dkr.ecr.eu-north-1.amazonaws.com
+            docker pull ${ECRImageURI}
+            docker run -d 045230653823.dkr.ecr.eu-north-1.amazonaws.com/webhook-api:latest
+
+  ASGApi:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: ASG-API
+      MinSize: "2"
+      MaxSize: "6"
+      DesiredCapacity: "2"
+      HealthCheckGracePeriod: 300
+      VPCZoneIdentifier:
+        - !Ref PrivateAppSubnetA
+        - !Ref PrivateAppSubnetB
+      LaunchTemplate:
+        LaunchTemplateId: !Ref APILaunchTemplate
+        Version: !GetAtt APILaunchTemplate.LatestVersionNumber
+      TargetGroupARNs:
+        - !Ref APITargetGroup
+      Tags:
+        - Key: Name
+          Value: ASG-API
+          PropagateAtLaunch: true
+
+  ASGWorker:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: ASG-Worker
+      MinSize: "1"
+      MaxSize: "4"
+      DesiredCapacity: "1"
+      VPCZoneIdentifier:
+        - !Ref PrivateAppSubnetA
+        - !Ref PrivateAppSubnetB
+      LaunchTemplate:
+        LaunchTemplateId: !Ref WorkerLaunchTemplate
+        Version: !GetAtt WorkerLaunchTemplate.LatestVersionNumber
+      Tags:
+        - Key: Name
+          Value: ASG-Worker
+          PropagateAtLaunch: true
+
+  APICPUScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref ASGApi
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 60.0
+
+  # ══════════════════════════════════════════
+  # NASSAR - Phase 5: Security (SEC-01, SEC-02, SEC-03)
+  # ══════════════════════════════════════════
+
+  # SEC-01: IAM Roles
+  WebhookAPIRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: webhook-api-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: webhook-api-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                  - cloudwatch:PutMetricData
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub "arn:aws:secretsmanager:eu-north-1:045230653823:secret:webhook-pipeline/*"
+
+  WebhookWorkerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: webhook-worker-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: webhook-worker-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - s3:PutObject
+                  - cloudwatch:PutMetricData
+                Resource: "*"
+
+  # SEC-02: Secrets Manager
+  DBSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: webhook-pipeline/db
+      Description: RDS master credentials for webhook pipeline
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "webhookadmin"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        ExcludeCharacters: '"@/\'
+
+  # SEC-03: KMS Key
+  WebhookKMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS key for webhook pipeline encryption
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::045230653823:root"
+            Action: kms:*
+            Resource: "*"
+
+  WebhookKMSAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: alias/webhook-pipeline-key
+      TargetKeyId: !Ref WebhookKMSKey
+
+  # ══════════════════════════════════════════
+  # NASSAR - Phase 6: Observability (OBS-03, OBS-04)
+  # ══════════════════════════════════════════
+
+  # OBS-03: SNS Topic + CloudWatch Alarms
+  AlertsSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: api-alerts-topic
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  # CloudWatch Log Groups
+  APILogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /webhook-pipeline/api
+      RetentionInDays: 30
+
+  WorkerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /webhook-pipeline/worker
+      RetentionInDays: 30
+
+  ALBLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /webhook-pipeline/alb
+      RetentionInDays: 14
+
+  ALB5xxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ALB-5xx-High
+      AlarmDescription: ALB 5XX rate > 5% for 5 minutes
+      MetricName: HTTPCode_Target_5XX_Count
+      Namespace: AWS/ApplicationELB
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlertsSNSTopic
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !GetAtt ALBWebhook.LoadBalancerFullName
+
+  RDSStorageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: RDS-LowStorage
+      AlarmDescription: RDS free storage < 5GB
+      MetricName: FreeStorageSpace
+      Namespace: AWS/RDS
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5368709120
+      ComparisonOperator: LessThanThreshold
+      AlarmActions:
+        - !Ref AlertsSNSTopic
+
+  ASGMaxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ASG-API-AtMaxCapacity
+      AlarmDescription: API ASG reached max instance count
+      MetricName: GroupMaxSize
+      Namespace: AWS/AutoScaling
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 6
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref AlertsSNSTopic
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value: ASG-API
+
+  # OBS-04: S3 Bucket for Logs
+  LogsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "webhook-pipeline-logs-${AWS::AccountId}"
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !Ref WebhookKMSKey
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: MoveToIA
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 30
+                StorageClass: STANDARD_IA
+              - TransitionInDays: 90
+                StorageClass: GLACIER
+
+  # ══════════════════════════════════════════
+  # NASSAR - Phase 7: CI/CD (CICD-01, CICD-02, CICD-03)
+  # ══════════════════════════════════════════
+
+  # CICD-01: ECR Repository
+  ECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: webhook-api
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: KMS
+        KmsKey: !Ref WebhookKMSKey
+      Tags:
+        - Key: Name
+          Value: webhook-api
+
+  # ══════════════════════════════════════════
+  # BISSAN PLACEHOLDER - Phase 3: Database & Messaging
+  # (To be completed when Bissan's tasks are ready)
+  # ══════════════════════════════════════════
+
+  # DB-01: RDS Subnet Group (PLACEHOLDER)
+  # RDSSubnetGroup:
+  #   Type: AWS::RDS::DBSubnetGroup
+  #   Properties:
+  #     DBSubnetGroupDescription: webhook-pipeline-db-subnet-group
+  #     SubnetIds:
+  #       - !Ref PrivateDataSubnetA
+  #       - !Ref PrivateDataSubnetB
+
+  # DB-02: RDS PostgreSQL (PLACEHOLDER)
+  # RDSInstance:
+  #   Type: AWS::RDS::DBInstance
+  #   Properties:
+  #     DBInstanceClass: db.t3.medium
+  #     Engine: postgres
+  #     EngineVersion: "15"
+  #     MultiAZ: true
+  #     MasterUsername: webhookadmin
+  #     MasterUserPassword: !Ref DBPassword
+  #     AllocatedStorage: "20"
+  #     StorageType: gp3
+  #     VPCSecurityGroups:
+  #       - !Ref SGRds
+  #     DBSubnetGroupName: !Ref RDSSubnetGroup
+
+  # SQS-01 & SQS-02: Queues (PLACEHOLDER)
+  # WebhookDLQ:
+  #   Type: AWS::SQS::Queue
+  #   Properties:
+  #     QueueName: webhook-pipeline-dlq
+  #     MessageRetentionPeriod: 1209600
+  #
+  # WebhookQueue:
+  #   Type: AWS::SQS::Queue
+  #   Properties:
+  #     QueueName: webhook-pipeline-queue
+  #     VisibilityTimeout: 60
+  #     RedrivePolicy:
+  #       deadLetterTargetArn: !GetAtt WebhookDLQ.Arn
+  #       maxReceiveCount: 3
+
+# ─────────────────────────────────────────────
+# OUTPUTS
+# ─────────────────────────────────────────────
+Outputs:
+  VPCId:
+    Description: VPC ID
+    Value: !Ref WebhookVPC
+    Export:
+      Name: WebhookVPCId
+
+  ALBDNSName:
+    Description: ALB DNS Name
+    Value: !GetAtt ALBWebhook.DNSName
+    Export:
+      Name: WebhookALBDNS
+
+  ECRRepositoryURI:
+    Description: ECR Repository URI
+    Value: !Sub "045230653823.dkr.ecr.eu-north-1.amazonaws.com/webhook-api"
+    Export:
+      Name: WebhookECRURI
+
+  SNSTopicARN:
+    Description: SNS Alerts Topic ARN
+    Value: !Ref AlertsSNSTopic
+    Export:
+      Name: WebhookSNSTopicARN
+
+  KMSKeyId:
+    Description: KMS Key ID for encryption
+    Value: !Ref WebhookKMSKey
+    Export:
+      Name: WebhookKMSKeyId
