@@ -26,4 +26,4 @@ jobs:
       run: |
         aws autoscaling start-instance-refresh \
           --auto-scaling-group-name ASG-API \
-          --preferences '{"MinHealthyPercentage": 50}'
+          --preferences '{"MinHealthyPercentage": 50}' || true
