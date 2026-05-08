@@ -72,3 +72,8 @@ export async function failJob(jobId: string, errorMessage: string) {
 
   return result[0];
 }
+export async function getJobById(id: string) {
+  const result = await db.select().from(jobs).where(eq(jobs.id, id));
+
+  return result[0];
+}

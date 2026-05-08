@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { sendJobMessageToQueue } from '../../services/sqsService';
 import {
   findPipelineByWebhookPath,
   createJob,
@@ -12,6 +13,12 @@ export async function ingestWebhookHandler(req: Request, res: Response) {
       return res.status(404).json({ error: 'Pipeline not found' });
     }
     const job = await createJob({ pipelineId: pipeline.id, payload: req.body });
+    await sendJobMessageToQueue({
+      jobId: job.id,
+      pipelineId: pipeline.id,
+      actionType: pipeline.actionType,
+    });
+
     res.status(202).json({ message: 'webhook received and job queued!', job });
   } catch (error) {
     console.error(error);

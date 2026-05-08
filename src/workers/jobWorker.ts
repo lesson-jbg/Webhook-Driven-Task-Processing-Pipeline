@@ -3,6 +3,7 @@ import {
   updateJobStatus,
   completeJob,
   failJob,
+  getJobById,
 } from '../services/jobService';
 import { getPipelineById } from '../services/pipelineService';
 import { runAction } from '../actions';
@@ -72,4 +73,51 @@ export async function startWorker() {
       console.error('Worker error:', message);
     }
   }, 3000);
+}
+export async function processJobById(jobId: string) {
+  const job = await getJobById(jobId);
+
+  if (!job) {
+    throw new Error(`Job not found: ${jobId}`);
+  }
+
+  console.log('Processing job from SQS:', job.id);
+
+  await updateJobStatus(job.id, 'processing');
+
+  const pipeline = await getPipelineById(job.pipelineId);
+
+  if (!pipeline) {
+    await failJob(job.id, 'Pipeline not found');
+    return;
+  }
+
+  const processedPayload = await runAction(
+    pipeline.actionType,
+    job.payload as { message?: string; [key: string]: unknown },
+  );
+
+  await completeJob(job.id, processedPayload);
+
+  const subscribers = await getSubscribersByPipelineId(job.pipelineId);
+
+  for (const subscriber of subscribers) {
+    const result = await sendWithRetry(
+      subscriber.callbackUrl,
+      processedPayload,
+      3,
+    );
+
+    await createDelivery({
+      jobId: job.id,
+      subscriberId: subscriber.id,
+      status: result.success ? 'success' : 'failed',
+      attemptCount: result.attemptCount,
+      lastAttemptAt: new Date(),
+      deliveredAt: result.success ? new Date() : null,
+      lastError: result.lastError,
+    });
+  }
+
+  console.log('SQS job completed:', job.id);
 }

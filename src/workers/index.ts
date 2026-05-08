@@ -1,6 +1,7 @@
 import 'dotenv/config';
-import { startWorker } from './jobWorker';
+import { startSqsWorker } from './sqsWorker';
 
-startWorker();
-
-console.log('Worker entry started');
+startSqsWorker().catch((error) => {
+  console.error('Failed to start SQS worker:', error);
+  process.exit(1);
+});
