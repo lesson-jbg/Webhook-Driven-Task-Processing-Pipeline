@@ -60,6 +60,13 @@ export async function startSqsWorker() {
             error instanceof Error ? error.message : 'Unknown SQS job error';
 
           console.error('Failed to process SQS message:', messageText);
+          if (error && typeof error === 'object' && 'response' in error) {
+            const axiosError = error as any;
+            console.error('HTTP status:', axiosError.response?.status);
+            console.error('HTTP URL:', axiosError.config?.url);
+            console.error('HTTP method:', axiosError.config?.method);
+            console.error('HTTP data:', axiosError.response?.data);
+          }
 
           // Important:
           // Do NOT delete failed messages.

@@ -102,21 +102,48 @@ export async function processJobById(jobId: string) {
   const subscribers = await getSubscribersByPipelineId(job.pipelineId);
 
   for (const subscriber of subscribers) {
-    const result = await sendWithRetry(
-      subscriber.callbackUrl,
-      processedPayload,
-      3,
-    );
+    try {
+      const result = await sendWithRetry(
+        subscriber.callbackUrl,
+        processedPayload,
+        3,
+      );
 
-    await createDelivery({
-      jobId: job.id,
-      subscriberId: subscriber.id,
-      status: result.success ? 'success' : 'failed',
-      attemptCount: result.attemptCount,
-      lastAttemptAt: new Date(),
-      deliveredAt: result.success ? new Date() : null,
-      lastError: result.lastError,
-    });
+      await createDelivery({
+        jobId: job.id,
+        subscriberId: subscriber.id,
+        status: result.success ? 'success' : 'failed',
+        attemptCount: result.attemptCount,
+        lastAttemptAt: new Date(),
+        deliveredAt: result.success ? new Date() : null,
+        lastError: result.lastError,
+      });
+
+      if (result.success) {
+        console.log(`Delivered job ${job.id} to ${subscriber.callbackUrl}`);
+      } else {
+        console.error(
+          `Failed delivery for job ${job.id} to ${subscriber.callbackUrl} after ${result.attemptCount} attempts`,
+        );
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown delivery error';
+
+      await createDelivery({
+        jobId: job.id,
+        subscriberId: subscriber.id,
+        status: 'failed',
+        attemptCount: 3,
+        lastAttemptAt: new Date(),
+        deliveredAt: null,
+        lastError: message,
+      });
+
+      console.error(
+        `Delivery error for job ${job.id} to ${subscriber.callbackUrl}: ${message}`,
+      );
+    }
   }
 
   console.log('SQS job completed:', job.id);

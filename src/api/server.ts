@@ -3,7 +3,6 @@ import { pool } from '../db/client';
 import pipelineRoutes from './routes/pipelineRoutes';
 import subscriberRoutes from './routes/subscriberRoutes';
 import webhookRoutes from './routes/webhookRoutes';
-import { startWorker } from '../workers/jobWorker';
 import jobRoutes from './routes/jobRoutes';
 import path from 'path';
 const app = express();
@@ -27,4 +26,4 @@ pool
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
-startWorker();
+//startWorker();
