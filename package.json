@@ -4,16 +4,16 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-  "test": "echo \"No tests configured yet\" && exit 0",
-  "dev": "ts-node-dev src/api/server.ts",
-  "build": "tsc",
-  "start": "node dist/api/server.js",
-  "worker": "node dist/workers/jobWorker.js",
-  "migrate": "drizzle-kit migrate",
-  "lint": "eslint .",
-  "format": "prettier --write .",
-  "format:check": "prettier --check ."
-},
+    "test": "echo \"No tests configured yet\" && exit 0",
+    "dev": "ts-node-dev src/api/server.ts",
+    "build": "tsc",
+    "start": "node dist/api/server.js",
+    "worker": "node dist/workers/jobWorker.js",
+    "migrate": "drizzle-kit migrate",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lesson-jbg/Webhook-Driven-Task-Processing-Pipeline.git"
