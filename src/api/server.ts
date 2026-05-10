@@ -15,11 +15,10 @@ app.use(express.json());
 app.use('/api', pipelineRoutes);
 app.use('/api', subscriberRoutes);
 app.use('/api', webhookRoutes);
-app.use('/api', jobRoutes');
+app.use('/api', jobRoutes);
 
 app.use(express.static(path.join(__dirname, '../../public')));
 
-// HEALTH CHECK
 app.get('/health', (_req, res) => {
   res.status(200).json({
     status: 'ok',
